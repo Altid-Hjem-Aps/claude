@@ -1,8 +1,8 @@
 # claude
 
 Personal Claude Code configuration. `CLAUDE.md` holds the workflow guidelines
-Claude follows in every session: ground rules, forbidden behaviors, delegation
-strategy, planning, and coding conventions.
+Claude follows in every session: communication rules, hard rules, working style,
+and coding conventions.
 
 ## Who this is for
 
