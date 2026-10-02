@@ -20,13 +20,13 @@ Read it first. If it is missing, build it once and show it to the user to confir
 - Identity: `git config user.name` and `user.email`, `gh api user -q .login`, Linear's `me`, and the user's Slack name (the Slack MCP's whoami or profile).
 - Repos: local clones whose `origin` is in the `Altid-Hjem-Aps` GitHub org. Find them with `find ~ /data -maxdepth 4 -name .git -type d 2>/dev/null` and check each remote. Skip extra worktrees of a repo already listed (same remote).
 - Orchestrated repos: repos where bot merges count as the user's own work (for example Homebase for whoever runs it). Ask; default none.
-- Slack: which workspace and channels to skim. Default the Altid Hjem workspace, #engineering and #core-team.
+- Slack: which channels to skim per workspace. Default #engineering and #core-team in Altid Hjem, #engineering in the other workspaces the user is in.
 
 ```markdown
 Name: <name>  Git: <name/email>  GitHub: <login>  Slack: <name>
 Repos: <path> (<owner/repo>), ...
 Orchestrated: <repo> or none
-Slack: <workspace>: #engineering, #core-team
+Slack: <workspace>: <channels>; <workspace>: <channels>
 ```
 
 ## Journal: `~/.claude/standup/journal.md`
@@ -52,9 +52,13 @@ The last entry sets the window ("since" = its date; no entry = last working day,
    - Issues labelled `blocked`, and issues where Alti or someone else asked the user a question (recent comments mentioning them).
 3. Git, for each configured repo: `git fetch --quiet`, then `git log --all --since=<window> --format='%h %an %ae %s'`. The user's commits match their git name or email. `altid-alti[bot]` is the pipeline, not the user, except in orchestrated repos, where everything merged counts as the user's.
 4. GitHub, per repo: `gh pr list --state merged --search "merged:>=<date>"` and `gh pr list --state open`. PRs the user authored or reviewed count as their work; their open PRs waiting on someone else's review or action are blocker candidates.
-5. Slack (whichever Slack MCP is connected), configured channels since the window, only for things blocking the user or waiting on them. Skip if it is down and say so in one line.
+5. Slack (whichever Slack MCP is connected), every workspace the user is in (Altid Hjem, Altid Mad, Altid Forsikring), since the window: the configured channels, plus messages mentioning the user and their DMs (search `to:me` and their @name). Look for things blocking them, waiting on them, or asks they sent (those go in Carry over). Skip a workspace that is down and say so in one line.
+6. Claude Code sessions: the user's main session logs since the window, skipping subagent logs: `find ~/.claude/projects -maxdepth 2 -name '*.jsonl' -newermt <window>`. From each, read only the user's own prompts with `jq -r 'select(.type=="user" and (.message.content|type)=="string") | .timestamp + " " + .cwd + " " + (.message.content|.[0:200])'`, dropping lines that start with `<` (tool and system noise). This catches work that never became a commit and work in repos not in the config. Summarise per topic; never quote prompts in the output.
+7. Unfinished local work, per configured repo: `git status --short`, branches with commits not on any remote (`git log --branches --not --remotes --oneline`), and `git worktree list`. These go in Carry over, and in Today only if they belong to the sprint.
+8. Linear activity that is not code: issues the user created, closed or commented on since the window (`list_issues` with `updatedAt`, then check whether the user made the change). Closing an issue or settling a decision is Yesterday work even with no commit.
+9. Calendar, optional: if a calendar integration is connected and authenticated, today's meetings go under Today (one bullet, e.g. "Demo 10:00, roadmap meeting 14:00"). If none is connected, skip it without comment.
 
-If a source fails (Linear auth, gh, Slack), say which one in the output. Don't silently report less.
+If a source fails (Linear auth, gh, Slack, session logs), say which one in the output. Don't silently report less.
 
 ## Blockers
 
@@ -68,9 +72,9 @@ Write in the language the user asked in. Three short sections as bullet lists, o
 Igår:
 - <broad item>
 I dag:
-- <from sprint + carry over, described in plain words>
+- <from sprint + carry over, in plain words> (ALT-123: <link>)
 Blockers:
 - <person: what> (or "- ingen")
 ```
 
-(English: Yesterday / Today / Blockers.) It is the user's own standup: Yesterday and Today hold only what they did or will work on themselves (their commits, reviews and fixes, their orchestrated repos, issues assigned to them). Other people's work is left out unless the user did part of it, or it blocks them, and then it goes under Blockers. Say what each item is in plain words ("the Altid Mad-only login token"), never as an issue id: the team is AI-driven and nobody remembers what most ALT numbers are. No ALT ids, PR numbers, tables, bold or file paths in the output. The journal keeps the ids, since the next session needs them to look things up. Pipeline merges get one line at most ("Alti merged 4 small fixes"). After the output, write the journal entry, then stop.
+(English: Yesterday / Today / Blockers.) It is the user's own standup: Yesterday and Today hold only what they did or will work on themselves (their commits, reviews and fixes, their orchestrated repos, issues assigned to them). Other people's work is left out unless the user did part of it, or it blocks them, and then it goes under Blockers. Say what each item is in plain words ("the Altid Mad-only login token"): the team is AI-driven and nobody remembers what most ALT numbers are, so a bare id is never enough. When an item has an issue, put it after the words in parentheses with its link: "The Altid Mad-only login token (ALT-379: https://linear.app/altid/issue/ALT-379)". No PR numbers, tables, bold or file paths in the output. The journal keeps the ids, since the next session needs them to look things up. Pipeline merges get one line at most ("Alti merged 4 small fixes"). After the output, write the journal entry, then stop.
