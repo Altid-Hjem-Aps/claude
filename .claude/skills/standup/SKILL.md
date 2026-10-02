@@ -66,7 +66,7 @@ Only things where someone other than the user has to act: a review, an answer, a
 
 ## Output
 
-Write in the language the user asked in. Three short sections as bullet lists, one short bullet per item, no more than 10 bullets total:
+Write in the language the user asked in. Three short sections as bullet lists, one short bullet per item, no more than 12 bullets total:
 
 ```
 Igår:
@@ -77,4 +77,4 @@ Blockers:
 - <person: what> (or "- ingen")
 ```
 
-(English: Yesterday / Today / Blockers.) It is the user's own standup: Yesterday and Today hold only what they did or will work on themselves (their commits, reviews and fixes, their orchestrated repos, issues assigned to them). Other people's work is left out unless the user did part of it, or it blocks them, and then it goes under Blockers. Say what each item is in plain words ("the Altid Mad-only login token"): the team is AI-driven and nobody remembers what most ALT numbers are, so a bare id is never enough. When an item has an issue, put it after the words in parentheses with its link: "The Altid Mad-only login token (ALT-379: https://linear.app/altid/issue/ALT-379)". No PR numbers, tables, bold or file paths in the output. The journal keeps the ids, since the next session needs them to look things up. Pipeline merges get one line at most ("Alti merged 4 small fixes"). After the output, write the journal entry, then stop.
+(English: Yesterday / Today / Blockers.) It is the user's own standup: Yesterday and Today hold only what they did or will work on themselves (their commits, reviews and fixes, their orchestrated repos, issues assigned to them). Other people's work is left out unless the user did part of it, or it blocks them, and then it goes under Blockers. Say what each item is in plain words ("the Altid Mad-only login token"): the team is AI-driven and nobody remembers what most ALT numbers are, so a bare id is never enough. When an item has an issue, put it after the words in parentheses with its link: "The Altid Mad-only login token (ALT-379: https://linear.app/altid/issue/ALT-379)". One issue per bullet: never combine two issues in one line; split them. No PR numbers, tables, bold or file paths in the output. The journal keeps the ids, since the next session needs them to look things up. Pipeline merges get one line at most ("Alti merged 4 small fixes"). After the output, write the journal entry, then stop.
