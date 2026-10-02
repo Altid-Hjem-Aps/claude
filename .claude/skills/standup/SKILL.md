@@ -34,27 +34,27 @@ Slack: <workspace>: <channels>; <workspace>: <channels>
 One entry per standup, newest first:
 
 ```markdown
-## 2026-10-01
+## 2026-10-01 09:15
 Done: <1-3 broad lines>
 Today: <1-3 lines, ALT-ids where they exist>
 Blockers: <who, what> or none
 Carry over: <open threads the next session needs to keep working: half-done branches, PRs waiting on review, decisions pending, things promised to someone>
 ```
 
-The last entry sets the window ("since" = its date; no entry = last working day, Monday reaches back to Friday; no standups on weekends). Its Carry over is the first thing to check: resolved, still open, or gone stale. Keep the last 10 entries; delete older ones. If today already has an entry, replace it.
+The last entry sets the window: "since" = its date and time (the heading carries both; write the current local time when you write an entry). A second run on the same day therefore only looks at what happened since the first. If an old entry has no time, use its date. No entry at all: the last working day (Monday reaches back to Friday; no standups on weekends). Its Carry over is the first thing to check: resolved, still open, or gone stale. Keep the last 10 entries; delete older ones. A second run on the same day adds a new entry; it does not replace the earlier one.
 
 ## Gather (in parallel)
 
 1. Vision, cheap and once: the Overview in the app repo's `CLAUDE.md`, the current cycle's description, and the newest project status updates (`get_status_updates`, type project). Enough to know what the sprint is for. Don't read specs.
 2. Linear, team Altid Hjem:
-   - `list_cycles` type current (teamId must be the UUID `aaff3d60-51d8-492a-90a7-7342996e5de3`; the name fails), then `list_issues` with that cycle. This is the priority source for Today.
-   - Issues assigned to the user (`assignee: "me"`) updated since the window.
+   - `list_cycles` type current (teamId must be the UUID `aaff3d60-51d8-492a-90a7-7342996e5de3`; the name fails), then `list_issues` with that cycle and `assignee: "me"`. This is the source for Today.
+   - The whole cycle, once, for context and blockers.
    - Issues labelled `blocked`, and issues where Alti or someone else asked the user a question (recent comments mentioning them).
 3. Git, for each configured repo: `git fetch --quiet`, then `git log --all --since=<window> --format='%h %an %ae %s'`. The user's commits match their git name or email. `altid-alti[bot]` is the pipeline, not the user, except in orchestrated repos, where everything merged counts as the user's.
 4. GitHub, per repo: `gh pr list --state merged --search "merged:>=<date>"` and `gh pr list --state open`. PRs the user authored or reviewed count as their work; their open PRs waiting on someone else's review or action are blocker candidates.
-5. Slack (whichever Slack MCP is connected), every workspace the user is in (Altid Hjem, Altid Mad, Altid Forsikring), since the window: the configured channels, plus messages mentioning the user and their DMs (search `to:me` and their @name). Look for things blocking them, waiting on them, or asks they sent (those go in Carry over). Skip a workspace that is down and say so in one line.
-6. Claude Code sessions: the user's main session logs since the window, skipping subagent logs: `find ~/.claude/projects -maxdepth 2 -name '*.jsonl' -newermt <window>`. From each, read only the user's own prompts with `jq -r 'select(.type=="user" and (.message.content|type)=="string") | .timestamp + " " + .cwd + " " + (.message.content|.[0:200])'`, dropping lines that start with `<` (tool and system noise). This catches work that never became a commit and work in repos not in the config. Summarise per topic; never quote prompts in the output.
-7. Unfinished local work, per configured repo: `git status --short`, branches with commits not on any remote (`git log --branches --not --remotes --oneline`), and `git worktree list`. These go in Carry over, and in Today only if they belong to the sprint.
+5. Slack (whichever Slack MCP is connected), every workspace the user is in (Altid Hjem, Altid Mad, Altid Forsikring), since the window: the configured channels, plus messages mentioning the user and their DMs (search `to:me` and their @name; DM channels can't be opened with read_channel, so work from the search snippets). Look for things blocking them, waiting on them, or asks they sent (those go in Carry over). Skip a workspace that is down and say so in one line.
+6. Claude Code sessions: the user's main session logs since the window, skipping subagent logs: `find ~/.claude/projects -maxdepth 2 -name '*.jsonl' -newermt <window>`. From each, read only the user's own prompts with `jq -r 'select(.type=="user" and .isMeta != true and .isCompactSummary != true and (.message.content|type)=="string") | .timestamp + " " + .cwd + " " + (.message.content|.[0:200])'`, dropping lines that start with `<` (tool and command output) or with "This session is being continued" (compaction summaries). This catches work that never became a commit and work in repos not in the config. Summarise per topic; never quote prompts in the output.
+7. Unfinished local work, per configured repo: `git status --short`, branches with commits not on any remote (`git log --branches --not --remotes --oneline`), and `git worktree list`. Housekeeping (stale worktrees, stray files) goes in the journal's Carry over only, never in the output. A half-done branch for a sprint issue just marks that issue as started.
 8. Linear activity that is not code: issues the user created, closed or commented on since the window (`list_issues` with `updatedAt`, then check whether the user made the change). Closing an issue or settling a decision is Yesterday work even with no commit.
 9. Calendar, optional: if a calendar integration is connected and authenticated, today's meetings go under Today (one bullet, e.g. "Demo 10:00, roadmap meeting 14:00"). If none is connected, skip it without comment.
 
@@ -62,21 +62,45 @@ If a source fails (Linear auth, gh, Slack, session logs), say which one in the o
 
 ## Blockers
 
-Only things where someone other than the user has to act: a review, an answer, access, a vendor, a decision. Name the person. Things the user has to do themselves are Today, not blockers.
+Only things that are stuck right now because someone other than the user has to act: a review, an answer, access, a vendor, a decision. Name the person. Something due later (a readout due today, a review requested an hour ago) is not stuck yet. Things the user has to do themselves are Today, not blockers.
 
 ## Output
 
-Write in the language the user asked in. Three short sections as bullet lists, one short bullet per item:
+Write in Danish, with æ, ø and å, whatever language the user asked in: the standup is held in Danish. Only the Linear priority prefixes stay in English.
 
 ```
 Igår:
-- <broad item>
+- <outcome>
+
 I dag:
-- URGENT <in plain words, next step> (ALT-123: <link>)
+- <promise to a person, no issue>: <what> (lovet <person>, <where>)
+- URGENT <what, next step> (ALT-123: <link>)
 - HIGH <...>
-- +N more in the sprint
+- +N mere i sprinten (<what they are>)
+
 Blockers:
 - <person: what> (or "- ingen")
 ```
 
-(English: Yesterday / Today / Blockers.) It is the user's own standup: Yesterday and Today hold only what they did or will work on themselves (their commits, reviews and fixes, their orchestrated repos, issues assigned to them). Other people's work is left out unless the user did part of it, or it blocks them, and then it goes under Blockers. Each bullet must make sense to someone who has forgotten the issue: what it is, why it matters (one clause), and the concrete step today or what it waits on. "Fix build on 8/10" fails; "Decide at Thor's Mad-testen readout which fixes go into the build we submit to Apple" passes. To get there, read the issue description, not just its title (titles carry dates and jargon, descriptions carry the why and the plan). Today is not your pick of what the user should do; it is their open work in order of urgency, every URGENT and HIGH item gets a bullet; MEDIUM, LOW and NONE fold into one line "+N more in the sprint (what they are, in a few words)". Candidates: open issues assigned to them in the current cycle, plus Carry over. Blocked ones go under Blockers instead. Order by Linear priority, then a deadline or launch gate it feeds (nearest first, read from the issue: due date, dates in the title or description, "must land before X"), then whether someone else waits on it, then started before unstarted. Each bullet ends with what the next step is, or "not started". Start each bullet with the issue's Linear priority in capitals (URGENT, HIGH, MEDIUM, LOW, or NONE) and sort by it, most urgent first; within the same priority, nearest deadline first. Carry-over items with no issue get no prefix and go last. Say what each item is in plain words ("the Altid Mad-only login token"): the team is AI-driven and nobody remembers what most ALT numbers are, so a bare id is never enough. When an item has an issue, put it after the words in parentheses with its link: "The Altid Mad-only login token (ALT-379: https://linear.app/altid/issue/ALT-379)". One issue per bullet: never combine two issues in one line; split them. No PR numbers, tables, bold or file paths in the output. The journal keeps the ids, since the next session needs them to look things up. Pipeline merges get one line at most ("Alti merged 4 small fixes"). After the output, write the journal entry, then stop.
+### What earns a place
+
+A standup tells the team what moved, what is next and where you are stuck. Before writing a bullet, ask: would a teammate care, or does it change what someone does? Outcomes do (a fix shipped, a decision made, an issue closed, an ask sent to another team). Housekeeping does not (worktree cleanup, uncommitted notes, renamed flags, internal tooling tweaks, building this skill), unless it changes how the team works. When in doubt, leave it out; the journal keeps everything.
+
+### Keep it short
+
+- One line per bullet, about 15 words before the link. Cut every word that doesn't change the meaning.
+- Igår: at most 3 bullets. Group related work into one outcome ("Homebase deployer nu sig selv og laver kortere PR'er"), not a changelog.
+- I dag: every URGENT and HIGH issue gets a bullet; MEDIUM, LOW and NONE fold into "+N mere i sprinten (<few words>)". Each bullet: what it is in plain words, then the next step or "ikke startet". Add the why only when the what doesn't carry it.
+- Blockers: one line each, person first.
+- One blank line between the three sections.
+
+### Rules
+
+- It is the user's own standup. Igår and I dag hold only what they did or will work on (their commits, reviews and fixes, their orchestrated repos, issues assigned to them). Other people's work appears only under Blockers.
+- Only state what you read. Every claim about who did what, or why, must come from something you saw this run (a commit, a comment, a message). If you can't point to it, leave it out.
+- Read the issue description, not just the title: titles carry dates and jargon, descriptions carry the why and the plan.
+- I dag lists the user's open issues in the current cycle plus Carry over, sorted by Linear priority (prefix in English capitals: URGENT, HIGH, MEDIUM, LOW, NONE), then nearest deadline or launch gate, then whether someone waits on it, then started before unstarted. You don't pick; the user does. Blocked issues go under Blockers instead. Promises the user made to a person with no Linear issue ("jeg laver lige..." in Slack) go first, without a priority prefix, naming who waits: someone is waiting on them.
+- Plain words, never a bare id: the team is AI-driven and nobody remembers ALT numbers. One issue per bullet, with "(ALT-123: https://linear.app/altid/issue/ALT-123)" after the words. No PR numbers, tables, bold or file paths.
+- Pipeline merges outside orchestrated repos get one line at most ("Alti mergede 4 små rettelser").
+
+After the output, write the journal entry (it keeps the ids and the housekeeping), then stop.
