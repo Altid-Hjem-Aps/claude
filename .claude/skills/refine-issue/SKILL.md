@@ -36,4 +36,4 @@ If the user wants Alti to build it, judge whether this is agent work at all befo
 
 1. Show the complete draft issue and get an explicit OK.
 2. Create it in Linear, team Altid Hjem (`ALT-`), in Backlog with no owner and no sprint: a person sets points, owner and sprint. Add a type label (`Bug`, `Feature` or `Improvement`). Alti picks the repo from the issue, so no area label is needed. Use the Linear MCP; if it is not connected, stop and tell the user to connect it rather than posting another way.
-3. Ask whether to delegate to Alti now. Delegating = set Alti as the issue's delegate in Linear and move it from Backlog to Todo (Homebase skips Backlog); Homebase picks it up on its next tick. Never do this without an explicit yes.
+3. Ask whether to delegate to Alti now. Delegating = set Alti as the issue's delegate in Linear; Homebase picks it up on its next tick. Never do this without an explicit yes.
